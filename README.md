@@ -3,10 +3,12 @@
 ## chrono -- 操作日期时间的crate
 
 ### TimeDelta/ Duration -- 时间段
+
 TimeDelta结构体，别名是Duration，是对”时间段“的抽象，表示一个一段精确的时间跨度，以秒和纳秒表示。
 TimeDelta和标准库中的Duration的区别在于其是一个有符号的值（可以是负值），标准库中的Duration是一个无符号的值（不能是负值）。
 TimeDelta实现了Clone,Copy, Debug, Display, Default, Eq, PartialEq, Ord, PartialOrd等trait,因此可以复制、克隆、打印、生成默认值以及比较。
 TimeDelta实现了Add, Sub等运算trait，因此可以对其实例进行运算。
+
 ```rust
     // 1.创建一个时间段
     // 1.1 new -> Option(TimeDelta)
@@ -64,18 +66,22 @@ TimeDelta实现了Add, Sub等运算trait，因此可以对其实例进行运算�
 自己创建一个时间段实际应用中应该是比较少，比较多的是两个时间点相减获得一个时间段。
 
 ### DataTime -- 日期时间
+
 DateTime结构体表示一个时区的日期时间，其是时区相关的。DateTime是相对于TimeDelta的"时间点"的概念,代表的是某一刻的时间。 日期限制在大约+/- 262,000年。
-DateTime对象必须从TimeZone对象中构造，其结构体本身不存在相应的构造方法。
+
 DateTime<Tz>结构体是泛型结构体，其中泛型Tz代表时区，是实现了TimeZone trait的类型。TimeZone trait 有三种实现：
 
-* Utc : UTC 时区。当您不需要本地时间时，这是最有效的时区。 --- DateTime<Utc>
-* Local : 系统本地时区 --- DateTime<Local>
-* FixedOffset : 任意的固定时区,例如 UTC+09:00 或者 UTC-10:30 。这通常是由解析的文本日期和时间导致的。由于它存储的信息最多，并且不依赖于系统环境，因此您需要将其他时区规范化为此类型。 --- DateTime<FixedOffset>
+* Utc : UTC 时区。当您不需要本地时间时，这是最有效的时区。 --- `DateTime<Utc>`
+* Local : 系统本地时区 --- `DateTime<Local>`
+* FixedOffset : 任意的固定时区,例如 UTC+09:00 或者 UTC-10:30 。这通常是由解析的文本日期和时间导致的。由于它存储的信息最多，并且不依赖于系统环境，因此您需要将其他时区规范化为此类型。 --- `DateTime<FixedOffset>`
+
+DateTime对象是时区感知的，DateTime对象必须从TimeZone对象中构造，其结构体本身不存在相应的构造方法。所以首先要了解TimeZone对象的相关方法。
 Utc/Local都有一个now方法，可以返回一个DateTime<Utc>/Date<Local>，后者包含了相对于Utc时区的偏移量。这是创建当前日期时间的最佳方法。
 FixedOffset代表的是有相对于Utc时区固定偏移量的时区，偏移量的范围是[UTC-23:59:59,UTC+23:59:59].方法east_opt和west_opt可以创建特定的时区。
 FixedOffset没有now方法获取该时区的当前日期时间，但是可以使用DateTime定义的方法with_timezone将DateTime<Utc>和DateTime<Local>对象转换成对应时区的日期时间。FixedOffset实现了Copy, Clone, Debug, Display, Eq, PartialEq, Add, Sub等trait，另外还实现了FromStr trait,因此可以将字符串转换成时区。
 
 #### 构建特定时区
+
 ```rust
     let tz_east_6 = FixedOffset::east_opt(6 * 3600).expect("Out-of-bounds secs");
     println!("tz_east_6: {}", tz_east_6);
@@ -89,10 +95,15 @@ FixedOffset没有now方法获取该时区的当前日期时间，但是可以使
     let tz2 = FixedOffset::from_str("-1000").unwrap();
     println!("tz2: {}", tz2);
 ```
-#### Timezone trait
+
+#### Timezone trait提供的创建DateTime的方法
+
 TimeZone trait提供了很多创建日期时间的方法
+
+* 从Unix时间戳中构建日期时间
+* 从年月日和时间组件以及特定时区构建日期时间
+
 ```rust
-    // 学习TimeZone中的方法
     println!("{}", i64::MAX);
     let tz_local = FixedOffset::from_str("+0800").expect("out-of-bouds secs"); // 构建东八区时区
 
@@ -119,7 +130,9 @@ TimeZone trait提供了很多创建日期时间的方法
     let dt = tz_local.with_ymd_and_hms(262142, 12, 31, 12, 30, 50);
     println!("dt: {:?}", dt);
 ```
+
 #### 获取特定时区的当前日期时间
+
 ```rust
     // 2.1 从时区Timezone对象创建当前的日期时间
     // 2.1.1 获取当前Utc时区的当前日期时间
@@ -137,3 +150,111 @@ TimeZone trait提供了很多创建日期时间的方法
     println!("dt_fixed_offset: {}",dt_fixed_offset);
 ```
 
+以上知道了如何创建时区和从时区中创建DateTime对象，下面熟悉一下DateTime对象用法。
+
+#### 通过加减一定的时间段计算出一个新的日期时间DateTime对象
+
+```rust
+    // 创建一个DateTime对象
+    let dt = Local.with_ymd_and_hms(2024, 8, 23, 8, 30, 50).unwrap();
+    println!("dt: {}", dt);
+
+    // 对DateTime对象加减特定的时间段生成一个新的DateTime对象 -> Option<DateTime>
+    let after_5days = dt.checked_add_days(Days::new(5)).unwrap();
+    println!("after_5days: {}", after_5days);
+
+    let after_1month = dt.checked_add_months(Months::new(1)).unwrap();
+    println!("after_1month: {}", after_1month);
+
+    let after_2days = dt.checked_add_signed(TimeDelta::days(2)).unwrap();
+    println!("after_1day: {}", after_2days);
+    let after_2weeks = dt.checked_add_signed(TimeDelta::weeks(1)).unwrap();
+    println!("after_2weeks: {}", after_2weeks);
+
+    let before_2days = dt.checked_sub_days(Days::new(2)).unwrap();
+    println!("before_2days: {}", before_2days);
+
+    let before_2months = dt.checked_sub_months(Months::new(2)).unwrap();
+    println!("before_2months: {}", before_2months);
+
+    let before_2weeks = dt.checked_sub_signed(TimeDelta::weeks(2)).unwrap();
+    println!("before_2weeks: {}", before_2weeks);
+```
+
+#### DateTime对象相互转换
+
+```rust
+
+    // 将DateTime<Tz:TimeZone>类型转换成DateTime<FixedOffset>
+    // 比如将DateTime<Utc>, DateTime<Local> .etc => DateTime<FixedOffset>
+    let dt_fixed_offset = dt.fixed_offset();
+    println!("dt_fixed_offset: {}", dt_fixed_offset);
+
+    // 将DateTime<Tz> 转化成DateTime<Utc>
+    let dt_utc = dt.to_utc();
+    println!("dt_utc: {}", dt_utc);
+
+```
+
+#### 转换成无时区信息的NaiveDate/NaiveTime/NaiveDateTime
+
+```rust
+// 转换成无时区信息的NaiveDate/NaiveTime/NaiveDateTime
+    let naive_date = dt.date_naive();
+    println!("naive_date: {}", naive_date);
+    let naive_time = dt.time();
+    println!("naive_time: {}", naive_time);
+    let naive_dt_local = dt.naive_local();
+    println!("naive_dt_local: {}", naive_dt_local);
+    let naive_dt_utc = dt.naive_utc();
+    println!("naive_dt_utc: {}", naive_dt_utc);
+```
+
+#### 获取时区和偏移量
+
+```rust 
+    // 获取时区和偏移量
+    let tz = dt.timezone();
+    println!("tz: {:?}", tz);
+    let offset = dt.offset();
+    println!("offset: {:?}", offset);
+```
+
+#### 格式化日期时间
+
+```rust 
+// 格式化日期时间
+    let delayed_format = dt.format("%Y-%m-%d %H:%M:%S %z");
+    println!("delayed_format: {}", delayed_format);
+    let dt_str = format!("{}", delayed_format);
+    println!("dt_str: {}", dt_str);
+
+    let dt_format = dt.format_localized("%F", chrono::Locale::zh_CN);
+    let dt_str = format!("{}", dt_format);
+    println!("dt_str: {}", dt_str);
+```
+
+#### 将字符串解析为DateTime对象
+
+```rust
+    // 将字符串解析为DateTime对象
+    // parse_from_str传入的字符串必须包含时区信息
+    let dt1 = DateTime::parse_from_str("2024-08-23 10:54:20 -0000", "%F %H:%M:%S %z").unwrap();
+    println!("dt1: {}", dt1);
+
+    let (dt2, s) =
+        DateTime::parse_and_remainder("2024-08-23 10:54:20 -0000Hello,world!", "%F %H:%M:%S %z")
+            .unwrap();
+    println!("dt2: {}", dt2);
+    println!("remainder: {}", s);
+
+    let dt3 = DateTime::parse_from_rfc3339("1996-12-19T16:39:57-08:00").unwrap();
+    println!("dt3: {}", dt3);
+
+    let dt4 = DateTime::parse_from_rfc2822("Wed, 18 Feb 2015 23:16:09 GMT").unwrap();
+    println!("dt4: {}", dt4);
+```
+
+DateTime对象实现了Clone, Copy, Debug, Display, Default, Eq, PartialEq, Ord, PartialOrd等trait，因此可以克隆、复制、打印显示、生成默认值和比较。
+
+DateTime对象还实现了`Add<TimeDelta>`和Sub`<TimeDelta>`，因此可以加一个时间段生成一个新的日期时间。它还实现了`Sub<DateTime>`，可以和另一个日期时间相减，计算出间隔的时间段TimeDelta对象。

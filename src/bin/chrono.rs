@@ -1,13 +1,14 @@
 #![allow(unused, deprecated)]
 use std::{i64, str::FromStr, time::Duration};
 
-use chrono::{DateTime, FixedOffset, Local, TimeDelta, TimeZone, Utc};
+use chrono::{DateTime, Days, FixedOffset, Local, Month, Months, TimeDelta, TimeZone, Utc};
 
 fn main() {
     // duration_study();
+    // create_now_study();
+    // fixed_offset_study();
+    // timezone_study();
     datetime_study();
-    fixed_offset_study();
-    timezone_study();
 }
 
 // 1. 学习使用Duration/TimeDelta
@@ -67,7 +68,7 @@ fn duration_study() {
 }
 
 // 2. 学习使用DateTime
-fn datetime_study() {
+fn create_now_study() {
     // 2.1 从时区Timezone对象创建当前的日期时间
     // 2.1.1 获取当前Utc时区的当前日期时间
     let dt_utc = Utc::now();
@@ -127,4 +128,83 @@ fn timezone_study() {
     // 从年月日和时分秒等组件和时区构建日期时间
     let dt = tz_local.with_ymd_and_hms(262142, 12, 31, 12, 30, 50);
     println!("dt: {:?}", dt);
+}
+
+fn datetime_study() {
+    // 创建一个DateTime对象
+    let dt = Local.with_ymd_and_hms(2024, 8, 23, 8, 30, 50).unwrap();
+    println!("dt: {}", dt);
+
+    // 对DateTime对象加减特定的时间段生成一个新的DateTime对象 -> Option<DateTime>
+    let after_5days = dt.checked_add_days(Days::new(5)).unwrap();
+    println!("after_5days: {}", after_5days);
+
+    let after_1month = dt.checked_add_months(Months::new(1)).unwrap();
+    println!("after_1month: {}", after_1month);
+
+    let after_2days = dt.checked_add_signed(TimeDelta::days(2)).unwrap();
+    println!("after_1day: {}", after_2days);
+    let after_2weeks = dt.checked_add_signed(TimeDelta::weeks(1)).unwrap();
+    println!("after_2weeks: {}", after_2weeks);
+
+    let before_2days = dt.checked_sub_days(Days::new(2)).unwrap();
+    println!("before_2days: {}", before_2days);
+
+    let before_2months = dt.checked_sub_months(Months::new(2)).unwrap();
+    println!("before_2months: {}", before_2months);
+
+    let before_2weeks = dt.checked_sub_signed(TimeDelta::weeks(2)).unwrap();
+    println!("before_2weeks: {}", before_2weeks);
+
+    // 将DateTime<Tz:TimeZone>类型转换成DateTime<FixedOffset>
+    // 比如将DateTime<Utc>, DateTime<Local> .etc => DateTime<FixedOffset>
+    let dt_fixed_offset = dt.fixed_offset();
+    println!("dt_fixed_offset: {}", dt_fixed_offset);
+
+    // 将DateTime<Tz> 转化成DateTime<Utc>
+    let dt_utc = dt.to_utc();
+    println!("dt_utc: {}", dt_utc);
+
+    // 转换成无时区信息的NaiveDate/NaiveTime/NaiveDateTime
+    let naive_date = dt.date_naive();
+    println!("naive_date: {}", naive_date);
+    let naive_time = dt.time();
+    println!("naive_time: {}", naive_time);
+    let naive_dt_local = dt.naive_local();
+    println!("naive_dt_local: {}", naive_dt_local);
+    let naive_dt_utc = dt.naive_utc();
+    println!("naive_dt_utc: {}", naive_dt_utc);
+
+    // 获取时区和偏移量
+    let tz = dt.timezone();
+    println!("tz: {:?}", tz);
+    let offset = dt.offset();
+    println!("offset: {:?}", offset);
+
+    // 格式化日期时间
+    let delayed_format = dt.format("%Y-%m-%d %H:%M:%S %z");
+    println!("delayed_format: {}", delayed_format);
+    let dt_str = format!("{}", delayed_format);
+    println!("dt_str: {}", dt_str);
+
+    let dt_format = dt.format_localized("%F", chrono::Locale::zh_CN);
+    let dt_str = format!("{}", dt_format);
+    println!("dt_str: {}", dt_str);
+
+    // 将字符串解析为DateTime对象
+    // parse_from_str传入的字符串必须包含时区信息
+    let dt1 = DateTime::parse_from_str("2024-08-23 10:54:20 -0000", "%F %H:%M:%S %z").unwrap();
+    println!("dt1: {}", dt1);
+
+    let (dt2, s) =
+        DateTime::parse_and_remainder("2024-08-23 10:54:20 -0000Hello,world!", "%F %H:%M:%S %z")
+            .unwrap();
+    println!("dt2: {}", dt2);
+    println!("remainder: {}", s);
+
+    let dt3 = DateTime::parse_from_rfc3339("1996-12-19T16:39:57-08:00").unwrap();
+    println!("dt3: {}", dt3);
+
+    let dt4 = DateTime::parse_from_rfc2822("Wed, 18 Feb 2015 23:16:09 GMT").unwrap();
+    println!("dt4: {}", dt4);
 }
