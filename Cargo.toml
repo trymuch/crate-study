@@ -6,4 +6,11 @@ edition = "2021"
 [dependencies]
 chrono = { version = "0.4.38", features = ["unstable-locales"] }
 jsonwebtoken = "9.3.0"
+rand = "0.8.5"
+rsa = { version = "0.9.6", features = ["sha2"] }
 serde = { version = "1.0.208", features = ["derive"] }
+
+[profile.dev]
+opt-level = 3
+# [profile.dev.package.num-bigint-dig]
+# opt-level = 3
